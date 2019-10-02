@@ -1,0 +1,11 @@
+*.csv
+*.json
+*.txt
+*.jpg
+*.png
+*jpeg
+*.h5
+__pycache__
+__ipynb_checkpoints
+tblogs
+
