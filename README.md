@@ -6,18 +6,18 @@
 ## Introduction to Modules :
 
 ```
-├── **projects**                    <- Directory which holds all the projects
+├── projects                          <- Directory which holds all the projects
 |   |                   
-|   └── **xyz-project**             <- An image classification project 
+|   └── xyz-project                   <- An image classification project 
 |         |
-|         ├── **dataset**             <- Dataset of classified images
+|         ├── dataset                 <- Dataset of classified images
 |         |    |
 |         |    ├── train              <- Contains train images 
 |         |    ├── test               <- Contains testing images
 |         |    ├── valiation          <- Contains validation images
 |         |    └── may be csv/json    <- A file to extract dataset from it
 |         |
-|         ├── **model** 
+|         ├── model
 |         |    |
 |         |    ├── saved_model        <- Contains saved models
 |         |    ├── tblogs             <- Contains tensorboards
