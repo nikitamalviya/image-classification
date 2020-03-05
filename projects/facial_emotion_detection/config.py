@@ -1,17 +1,39 @@
 ''' DATASET PARAMETERS '''
 
-# training and testing dataset is needed, as data for validation is spliting during traning
+# training and testing dataset is needed, as data for validation is spliting during training
+# ** do not change this **
 train_data_path = "train"
 test_data_path = "test"
 
-# select the dataset type then given options : 'csv' /'json' / 'unspilt_data', 'None' (for the saved image dataset)
-dataset_type = 'csv'
+''' DATASET TO PROCESS '''
+## select the dataset type from given options :
+# None : when dataset is perfectly in required and train/test format
+# 'unspilt_data' : when dataset is in image format but exists in a single folder
+# 'csv_urls' : when dataset is in .csv file in url form with labels
+# 'csv_pixels : when dataset is in .csv file in the pixel values form with labels 
+# 'json' : when dataset is in .json file in url form with labels 
+dataset_type = 'json'
 
-# if the dataset is csv
-csv_name = 'fer2013.csv'
+## .CSV 
+csv_filename = 'data.csv'   #'fer2013.csv'
+
+### csv containing URLs and LABEL 
+image_url_column_name = "image_url" 
+image_name_column_index = 0
+image_url_column_index = 1
+image_label_column_index = 4
+## OR
+### csv containing PIXEL values and LABEL 
 images_column_name = 'pixels'
 label_column_name = 'emotion'
 
+## .JSON 
+json_filename = 'json_example.json'
+image_url_key_name = 'idfronturl'
+image_name_key_name = '_id'
+image_label_key_name = 'status'
+
+''' DATA SPLIT '''
 # split ratio to split dataset into train and test, the last argument is to separate images for prediction phase
 train_test_valid_ratio = (0.8, 0.1, 0.1)
 # validation split from training dataset
@@ -19,7 +41,6 @@ validation_split = 0.01
 
 
 ''' DATA AUGMENTATION '''
-
 # randomly rotate images in the range (degrees 0 to 180)
 rotation_range = 0
 
@@ -34,14 +55,16 @@ vertical_flip = False
 # Random zoom
 zoom_range = 0
 
+
 ''' MODEL PARAMETERS '''
 
+# give model a name
 model_name = 'Shapes-Classification'
 
-# Select one of these : `vgg16`, `fer`, `customized_model_name` 
+# Select one of these or can add and define more inside model.py : `vgg16`, `fer`, `customized_model_name` 
 selected_model =  'fer'
 
-# Image params (used in preprocessing images & model)
+# Image dimensions (used in preprocessing images & model) 
 img_height = 48
 img_width = 48
 channel = 3

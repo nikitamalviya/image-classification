@@ -5,11 +5,10 @@ import keras
 from keras import applications
 from keras import optimizers
 from keras.models import Sequential, Model, load_model
-from keras.layers import Dense, Dropout, Flatten, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization, GlobalAveragePooling2D
+from keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization, GlobalAveragePooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.advanced_activations import ELU
-from keras.layers.core import Activation, Flatten, Dropout, Dense
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard, EarlyStopping, ReduceLROnPlateau
 from keras.optimizers import RMSprop, SGD, Adam
 from keras import regularizers

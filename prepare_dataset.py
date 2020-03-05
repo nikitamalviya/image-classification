@@ -1,12 +1,17 @@
+import urllib.request
+from csv import reader
+import json
+import requests
 import uuid
+from tqdm import tqdm
+import os, os.path
 import shutil
 import split_folders
-import os
-import math
 import importlib
 from cv2 import cv2
 import numpy as np
 import pandas as pd
+import math
 import utils
 import validation
 
@@ -39,14 +44,22 @@ def prepare_dataset(project_name):
         # split images into train and test 
         split_dataset_into_train_test(split_input_path, split_output_path, config, paths)
     
-    elif((dataset_type == 'csv') & (flag == False)):
-        # get images into a single folder from csv
-        prepare_csv_dataset(project_name, config, dataset_path, images_folder_path)
+    elif((dataset_type == 'json') & (flag == False)):
+        prepare_json_dataset(project_name, config, dataset_path, paths)
         # split dataset into train and test
         split_dataset_into_train_test(split_input_path, split_output_path, config, paths)
     
-    elif((dataset_type == 'json') & (flag == False)):
-        prepare_json_dataset(project_name, config, dataset_path, images_folder_path)
+    elif((dataset_type == 'csv_urls') & (flag == False)):
+        # get images into a single folder from csv
+        prepare_csv_url_dataset(project_name, config, dataset_path, paths)
+        # split dataset into train and test
+        split_dataset_into_train_test(split_input_path, split_output_path, config, paths)
+
+    elif((dataset_type == 'csv_pixels') & (flag == False)):
+        # get images into a single folder from csv
+        prepare_csv_pixel_dataset(project_name, config, dataset_path, paths)
+        # split dataset into train and test
+        split_dataset_into_train_test(split_input_path, split_output_path, config, paths)
     
     else:
         return
@@ -70,8 +83,7 @@ def split_dataset_into_train_test(split_input_path, split_output_path, config, p
             for image in os.listdir(f"{split_output_path}/val/{dir}/"):
                 shutil.move(f"{split_output_path}/val/{dir}/{image}", f"{paths['input_path']}", copy_function = shutil.copytree)
     except:
-        utils.print_head(f"Unable to move validation dataset into predict folder!", color='red')
-
+        pass
     try:
         shutil.rmtree(split_input_path)
         shutil.rmtree(f"{split_output_path}/val")
@@ -82,35 +94,110 @@ def split_dataset_into_train_test(split_input_path, split_output_path, config, p
         except:
             pass
 
-def prepare_json_dataset(project_name, config, dataset_path, images_folder_path):
+def prepare_json_dataset(project_name, config, dataset_path, paths):
     ''' This function loads json dataset, extract images and labels '''
     utils.print_head("Preparing dataset from provided .json file... ", color='darkcyan')
-    pass
+    # create folder to store images if not exists
+    if os.path.exists(paths['images_path']) == False:
+        os.mkdir(paths['images_path'])
+    # load json
+    try:
+        saved, unable_to_download, already_existed  = 0, 0, 0
+        with open(config.json_filename) as json_file:
+            # load the json
+            data = json.load(json_file)
+            for item in tqdm(data):
+                # get the url
+                url = item[config.image_url_key_name]
+                # find image extension
+                image_extension = url[url.rfind('.'): ]
+                # get the image label
+                label = item[config.image_label_key_name]  #.strip('[', ']', '{', '}', "\'", '\"')
+                label = f'{paths["images_path"]}/{label}'
+                if os.path.exists(label) == False:
+                    os.mkdir(label)
+                # get the image name
+                name = f'{item[config.image_name_key_name].replace("/", " ")}{image_extension}'
+                # if image already exists
+                if os.path.isfile(name):
+                    already_existed += 1
+                    continue
+                else:
+                    try:
+                        # save the image
+                        urllib.request.urlretrieve(url = url, filename = f'{label}/{name}') 
+                        saved += 1
+                    except:
+                        utils.print_head(f"Unable to download : {name}", color='red')
+                        unable_to_download += 1
+                        continue
+            utils.print_head(f"** Dataset Status **\nTotal images processed : {saved+unable_to_download+already_existed}\nSaved images : {saved}\nUnable to download : {unable_to_download}\nAlready Existing : {already_existed}", color='purple')
 
-def prepare_text_dataset():
-    ''' This function loads text dataset, extract images and labels '''
-    utils.print_head("Preparing dataset from provided .txt file... ", color='darkcyan')
-    pass
+    except:
+        utils.print_head("JSON data file is not provided!\nCheck `json_filename` in config.py file & `dataset` folder...", color='red')
+        exit()
 
-def prepare_csv_dataset(project_name, config, dataset_path, images_folder_path):
-    ''' This function loads csv dataset, extract images and labels '''
-    utils.print_head("Preparing dataset from provided .csv file... ", color='darkcyan')
+def prepare_csv_url_dataset(project_name, config, dataset_path, paths):
+    ''' This function loads csv dataset containing image urls, extract images and labels '''
+    utils.print_head("Preparing dataset of provided .csv file having urls & labels... ", color='darkcyan')
+    # create folder to store images if not exists
+    if os.path.exists(paths['images_path']) == False:
+        os.mkdir(paths['images_path'])
     # load csv
     try:
-        dataset = pd.read_csv(f'{dataset_path}/{config.csv_name}')
+        with open((f'{dataset_path}/{config.csv_filename}'.format(f'{dataset_path}/{config.csv_filename}')), 'r') as csv_file: 
+            # save the status 
+            saved, unable_to_download, already_existed  = 0, 0, 0
+            # process the file
+            for csv_row in tqdm(reader(csv_file)):
+                if csv_row[config.image_url_column_index] != '' and csv_row[config.image_url_column_index] != config.image_url_column_name:
+                    # find image extension
+                    url = csv_row[config.image_url_column_index]
+                    # find image extension
+                    image_extension = url[url.rfind('.'): ]
+                    # get the label and store belongings to the respective folders
+                    label_column_name = csv_row[config.image_label_column_index].strip("[], '' ")
+                    label = f"{paths['images_path']}/{label_column_name}"
+                    if os.path.exists(label) == False:
+                        os.mkdir(label)
+                    # get image name
+                    name = f'{csv_row[config.image_name_column_index].replace("/", " ")}{image_extension}'
+                    # if image already exists
+                    if os.path.isfile(name):
+                        already_existed += 1
+                        continue
+                    else:
+                        try:
+                            urllib.request.urlretrieve(url = csv_row[config.image_url_column_index], filename = f'{label}/{name}')
+                            saved += 1
+                        except:
+                            utils.print_head(f"Unable to download {name}", color='red')
+                            unable_to_download += 1
+                            continue
+            utils.print_head(f"** Dataset Status **\nTotal images processed : {saved+unable_to_download+already_existed}\nSaved images : {saved}\nUnable to download : {unable_to_download}\nAlready Existing : {already_existed}", color='purple')
     except:
-        utils.print_head("CSV data file is not provided!\nCheck `csv_name` in config file & `dataset` folder...", color='red')
+        utils.print_head("CSV data file is not provided!\nCheck `csv_filename` in config.py file & `dataset` folder...", color='red')
+        exit()
+
+def prepare_csv_pixel_dataset(project_name, config, dataset_path, paths):
+    ''' This function loads csv dataset, extract images and labels '''
+    utils.print_head("Preparing dataset of provided .csv file having image pixels & labels... ", color='darkcyan')
+    # load csv
+    try:
+        dataset = pd.read_csv(f'{dataset_path}/{config.csv_filename}')
+    except:
+        utils.print_head("CSV data file is not provided!\nCheck `csv_filename` in config file & `dataset` folder...", color='red')
         exit()
 
     # create folder to store images if not exists
-    if os.path.exists(images_folder_path) == False:
-        os.mkdir(images_folder_path)
+    if os.path.exists(paths['images_path']) == False:
+        os.mkdir(paths['images_path'])
 
     ## Labels
     # create folders for the labels found in the dataset
     for folder_name in dataset[config.label_column_name].unique():
-        if os.path.exists(f'{images_folder_path}/{str(folder_name)}') == False:
-            os.mkdir(f'{images_folder_path}/{str(folder_name)}')
+        if os.path.exists(f"{paths['images_path']}/{str(folder_name)}") == False:
+            os.mkdir(f"{paths['images_path']}/{str(folder_name)}")
 
     labels = dataset[config.label_column_name].tolist()
     
@@ -131,4 +218,4 @@ def prepare_csv_dataset(project_name, config, dataset_path, images_folder_path):
         
         # save the image as .png file
         image_name = str(uuid.uuid4())
-        cv2.imwrite(f"{images_folder_path}/{str(image_label)}/{image_name}.png", image)       
+        cv2.imwrite(f"{paths['images_path']}/{str(image_label)}/{image_name}.png", image)       
